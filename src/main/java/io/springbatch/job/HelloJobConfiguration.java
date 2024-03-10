@@ -2,6 +2,7 @@ package io.springbatch.job;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.job.builder.JobBuilder;
@@ -15,6 +16,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.transaction.PlatformTransactionManager;
+
+import java.util.Date;
+import java.util.Map;
 
 @Configuration
 @RequiredArgsConstructor
@@ -50,9 +54,22 @@ public class HelloJobConfiguration {
     public Step helloStep2(JobRepository jobRepository, PlatformTransactionManager tx) {
         return new StepBuilder("helloStep2", jobRepository)
                 .tasklet((contribution, chunkContext) -> {
+                    // 객체로 반환됨.
+                    JobParameters contributionJobParams = contribution.getStepExecution().getJobParameters();
+                    String con_name = contributionJobParams.getString("name");
+                    Long con_seq = contributionJobParams.getLong("seq");
+                    Double con_age = contributionJobParams.getDouble("age");
+                    Date con_date = contributionJobParams.getDate("date");
+
+                    // Map 으로 반환됨(값만 확인 가능)
+                    Map<String, Object> chunkContextJobParams = chunkContext.getStepContext().getJobParameters();
+
                     System.out.println(" ====================== ");
-                    System.out.println(" >> Step 2 was executed");
+                    System.out.println(" >> Job parameters");
+                    System.out.println(" >> contribution - name: "+con_name+" seq: "+con_seq+" age: "+con_age+" date: "+con_date);
+                    System.out.println(" >> chunkContext - Map: "+ chunkContextJobParams.toString());
                     System.out.println(" ====================== ");
+
                     return RepeatStatus.FINISHED;
                 }, tx).build();
     }
