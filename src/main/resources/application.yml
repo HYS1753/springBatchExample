@@ -1,0 +1,38 @@
+spring:
+  profiles:
+    active: local
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+  port: 8080
+  batch:
+    jdbc:
+      initialize-schema: embedded # ALWAYS: 스프링 배치 db 스키마 항상 생성, EMBEDDED(default): 내장 DB 전용, NEVER: 스키마 초기화 안함.(운영)
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:test;MODE=MYSQL
+    username: root
+    password: password
+---
+# docker run --name mysql-container -e MYSQL_ROOT_PASSWORD=password -d -p 3306:3306 mysql:lastest
+spring:
+  config:
+    activate:
+      on-profile: mysql
+  batch:
+    job:
+      enabled: false # 기본 값은 true, 스프링 배치가 실행될 때 자동으로 생성된 모든 job을 실행시킬지 여부에 대한 조건.
+    jdbc:
+      initialize-schema: never
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/test?useUnicode=true&characterEncoding=utf8
+    username: root
+    password: password
