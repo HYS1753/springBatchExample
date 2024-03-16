@@ -41,6 +41,7 @@ public class HelloJobConfiguration {
                 .tasklet(new Tasklet() {
                     @Override
                     public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
+                        Thread.sleep(3000);
                         System.out.println(" ====================== ");
                         System.out.println(" >> Hello Spring Batch !!");
                         System.out.println(" ====================== ");
