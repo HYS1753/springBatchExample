@@ -25,7 +25,8 @@ import java.util.Map;
 public class HelloJobConfiguration {
     // Job 의 구현체를 생성 잡 이름은 helloJob
     @Bean
-    public Job HelloJob(JobRepository jobRepository, @Qualifier("helloStep1") Step helloStep1, @Qualifier("helloStep2") Step helloStep2) {
+    @Primary
+    public Job helloJob(JobRepository jobRepository, @Qualifier("helloStep1") Step helloStep1, @Qualifier("helloStep2") Step helloStep2) {
         return new JobBuilder("helloJob", jobRepository)
                 .start(helloStep1)
                 .next(helloStep2)

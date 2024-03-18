@@ -28,7 +28,8 @@ spring:
       on-profile: mysql
   batch:
     job:
-      enabled: false # 기본 값은 true, 스프링 배치가 실행될 때 자동으로 생성된 모든 job을 실행시킬지 여부에 대한 조건.
+      enabled: true # 기본 값은 true, 스프링 배치가 실행될 때 자동으로 생성된 모든 job을 실행시킬지 여부에 대한 조건.
+      name: ${job.name:NONE}
     jdbc:
       initialize-schema: never
   datasource:
