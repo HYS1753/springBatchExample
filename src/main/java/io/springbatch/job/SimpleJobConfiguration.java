@@ -1,7 +1,9 @@
 package io.springbatch.job;
 
+import io.springbatch.job.validator.CustomJobParametersValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.*;
+import org.springframework.batch.core.job.DefaultJobParametersValidator;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
@@ -27,6 +29,8 @@ public class SimpleJobConfiguration {
                 .start(simpleJobStep1)
                 .next(simpleJobStep2)
                 .next(simpleJobStep3)
+//                .validator(new CustomJobParametersValidator())  // 커스텀 하게 JobParametersValidator 를 상속 받아 검증
+                .validator(defaultJobParametersValidator())     // SpringBatch 에서 기본 제공하는 validator 사용하여 검증
                 .build();
     }
 
@@ -67,5 +71,14 @@ public class SimpleJobConfiguration {
 
                     return RepeatStatus.FINISHED;
                 }, tx).build();
+    }
+
+    private DefaultJobParametersValidator defaultJobParametersValidator() {
+        // 필수로 JobParameters에 포함 되어야 하는 키
+        String[] requiredKeys = {"name"};
+        // 반드시 포함은 안되도 되는 키
+        String[] optionalKeys = {"date", "count"};
+
+        return new DefaultJobParametersValidator(requiredKeys, optionalKeys);
     }
 }
