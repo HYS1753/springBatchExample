@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.job.DefaultJobParametersValidator;
 import org.springframework.batch.core.job.builder.JobBuilder;
+import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.repeat.RepeatStatus;
@@ -31,6 +32,7 @@ public class SimpleJobConfiguration {
                 .next(simpleJobStep3)
 //                .validator(new CustomJobParametersValidator())  // 커스텀 하게 JobParametersValidator 를 상속 받아 검증
                 .validator(defaultJobParametersValidator())     // SpringBatch 에서 기본 제공하는 validator 사용하여 검증
+//                .preventRestart()                               // Job의 재시작 여부를 설정(SimpleJob 내의 restartable 속성을 false 로 변경)
                 .build();
     }
 
