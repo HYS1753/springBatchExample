@@ -6,9 +6,12 @@ import org.springframework.batch.core.*;
 import org.springframework.batch.core.job.builder.FlowBuilder;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.job.flow.Flow;
+import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
+import org.springframework.batch.core.step.job.DefaultJobParametersExtractor;
+import org.springframework.batch.core.step.job.JobParametersExtractor;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.support.ListItemReader;
 import org.springframework.batch.repeat.RepeatStatus;
@@ -29,12 +32,14 @@ public class StepExampleJobConfiguration {
                          @Qualifier("taskletStep") Step taskletStep,
                          @Qualifier("customTaskletStep") Step customTaskletStep,
                          @Qualifier("chunkStep") Step chunkStep,
+                         @Qualifier("jobStep") Step jobStep,
                          @Qualifier("paritionerStep") Step paritionerStep) {
         return new JobBuilder("stepJob", jobRepository)
                 .incrementer(new RunIdIncrementer())
                 .start(taskletStep)
                 .next(customTaskletStep)
                 .next(chunkStep)
+                .next(jobStep)
                 //.next(paritionerStep)
                 .build();
     }
@@ -99,9 +104,18 @@ public class StepExampleJobConfiguration {
     }
 
     @Bean(name="jobStep")
-    public Step jobStep(JobRepository jobRepository, PlatformTransactionManager tx) {
+    public Step jobStep(JobRepository jobRepository, PlatformTransactionManager tx, JobLauncher jobLauncher) {
         return new StepBuilder("jobStep", jobRepository)
-                .job(jobStepExampleJob(jobRepository, tx))
+                .job(childJob(jobRepository, tx))
+                .launcher(jobLauncher)
+                .parametersExtractor(jobParametersExtractor())
+                .listener(new StepExecutionListener() {
+                    @Override
+                    public void beforeStep(StepExecution stepExecution) {
+                        StepExecutionListener.super.beforeStep(stepExecution);
+                        stepExecution.getExecutionContext().putString("name", "user1");
+                    }
+                })
                 .build();
     }
 
@@ -112,13 +126,19 @@ public class StepExampleJobConfiguration {
                 .build();
     }
 
-    private Job jobStepExampleJob(JobRepository jobRepository, PlatformTransactionManager tx) {
-        return new JobBuilder("jobStepExampleJob", jobRepository)
+    private Job childJob(JobRepository jobRepository, PlatformTransactionManager tx) {
+        return new JobBuilder("childJob", jobRepository)
                 .incrementer(new RunIdIncrementer())
                 .start(taskletStep(jobRepository, tx))
-                .next(chunkStep(jobRepository, tx))
-                //.next(partitionerStep(jobRepository, tx))
                 .build();
+    }
+
+    private DefaultJobParametersExtractor jobParametersExtractor() {
+        // StepExecution context 내의 값을 Child Job의 JobExecution context 의 값으로 변경시킴.
+        // setKeys의 경우 stepExecution Context 내에 설정한 Key 값이 있으면 넣겠다는 의미(여기서는 name)
+        DefaultJobParametersExtractor extractor = new DefaultJobParametersExtractor();
+        extractor.setKeys(new String[]{"name"});
+        return extractor;
     }
 
     private Flow flowStepExampleFlow(JobRepository jobRepository, PlatformTransactionManager tx) {
