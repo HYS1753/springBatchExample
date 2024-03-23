@@ -1,8 +1,8 @@
 package io.springbatch.job;
 
+import io.springbatch.tasklet.CustomTasklet;
 import lombok.RequiredArgsConstructor;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.Step;
+import org.springframework.batch.core.*;
 import org.springframework.batch.core.job.builder.FlowBuilder;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.job.flow.Flow;
@@ -27,11 +27,13 @@ public class StepExampleJobConfiguration {
     @Bean
     public Job stepJob(JobRepository jobRepository,
                          @Qualifier("taskletStep") Step taskletStep,
+                         @Qualifier("customTaskletStep") Step customTaskletStep,
                          @Qualifier("chunkStep") Step chunkStep,
                          @Qualifier("paritionerStep") Step paritionerStep) {
         return new JobBuilder("stepJob", jobRepository)
                 .incrementer(new RunIdIncrementer())
                 .start(taskletStep)
+                .next(customTaskletStep)
                 .next(chunkStep)
                 //.next(paritionerStep)
                 .build();
@@ -40,10 +42,32 @@ public class StepExampleJobConfiguration {
     @Bean(name="taskletStep")
     public Step taskletStep(JobRepository jobRepository, PlatformTransactionManager tx) {
         return new StepBuilder("taskletStep", jobRepository)
-                .tasklet((contribution, chunkContext) -> {
+                .tasklet((contribution, chunkContext) -> {  // 익명 클래스로 생성하는 방법.
                     System.out.println("tasklet Step has executed!");
                     return RepeatStatus.FINISHED;
                 }, tx).build();
+    }
+
+    @Bean(name="customTaskletStep")
+    public Step customTaskletStep(JobRepository jobRepository, PlatformTransactionManager tx) {
+        return new StepBuilder("customTaskletStep", jobRepository)
+                .tasklet(new CustomTasklet(), tx)
+                .startLimit(3)              // 최대 실행 가능 횟수 초과 시 StartLimitExceededExecption 발생
+                .allowStartIfComplete(true) // Step 이 성공했어도 다시 실행 하도록 설정하는 값.
+                .listener(new StepExecutionListener() {
+                    @Override
+                    public void beforeStep(StepExecution stepExecution) {
+                        StepExecutionListener.super.beforeStep(stepExecution);
+                        System.out.println("before CustomTaskletStep.");
+                    }
+
+                    @Override
+                    public ExitStatus afterStep(StepExecution stepExecution) {
+                        System.out.println("After CustomTaskletStep.");
+                        return StepExecutionListener.super.afterStep(stepExecution);
+                    }
+                })
+                .build();
     }
 
     @Bean(name="chunkStep")
