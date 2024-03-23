@@ -1,5 +1,6 @@
 package io.springbatch.job;
 
+import io.springbatch.step.listener.CustomExitStatusListener;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -34,14 +35,24 @@ public class FlowJobConfiguration {
     public Job simpleFlowJob(JobRepository jobRepository
             , @Qualifier("flowJobStep1") Step flowJobStep1
             , @Qualifier("flowJobStep2") Step flowJobStep2
-            , @Qualifier("flowJobStep3") Step flowJobStep3) {
+            , @Qualifier("flowJobStep3") Step flowJobStep3
+            , @Qualifier("flowJobStep4") Step flowJobStep4) {
         // 1번 step이 성공하면 3번 Step으로 이동, 실패하면 2번 Step 으로 이동
         return new JobBuilder("simpleFlowJob", jobRepository)
                 .incrementer(new RunIdIncrementer())
                 .start(flowJobStep1)
-                .on("COMPLETED").to(flowJobStep3)
+                    .on("COMPLETED")
+                    .to(flowJobStep3)
+                        .on("PASS")
+                        .to(flowJobStep4)
+                            .on("*")
+                            .stop()
                 .from(flowJobStep1)
-                .on("FAILED").to(flowJobStep2)
+                    .on("FAILED")
+                    .to(flowJobStep2)
+                .from(flowJobStep3)
+                    .on("*")
+                    .stop()
                 .end()
                 .build();
 
@@ -89,6 +100,20 @@ public class FlowJobConfiguration {
                     Thread.sleep(1000);
                     System.out.println(" ====================== ");
                     System.out.println(" >> Flow Job Step 3 executed !!");
+                    System.out.println(" ====================== ");
+                    return RepeatStatus.FINISHED;
+                }, tx) // or .chunk(chunkSize, transactionManager)
+                .listener(new CustomExitStatusListener())
+                .build();
+    }
+
+    @Bean(name = "flowJobStep4")
+    public Step flowJobStep4(JobRepository jobRepository, PlatformTransactionManager tx) {
+        return new StepBuilder("flowJobStep4", jobRepository)
+                .tasklet((contribution, chunkContext) -> {
+                    Thread.sleep(1000);
+                    System.out.println(" ====================== ");
+                    System.out.println(" >> Flow Job Step 4 executed !!");
                     System.out.println(" ====================== ");
                     return RepeatStatus.FINISHED;
                 }, tx) // or .chunk(chunkSize, transactionManager)

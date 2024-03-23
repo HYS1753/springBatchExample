@@ -1,6 +1,6 @@
 package io.springbatch.job;
 
-import io.springbatch.tasklet.CustomTasklet;
+import io.springbatch.step.tasklet.CustomTasklet;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.job.builder.FlowBuilder;
@@ -11,7 +11,6 @@ import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.step.job.DefaultJobParametersExtractor;
-import org.springframework.batch.core.step.job.JobParametersExtractor;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.support.ListItemReader;
 import org.springframework.batch.repeat.RepeatStatus;
