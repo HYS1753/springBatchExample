@@ -1,5 +1,6 @@
 package io.springbatch.job;
 
+import io.springbatch.job.decider.CustomDecider;
 import io.springbatch.step.listener.CustomExitStatusListener;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
@@ -8,6 +9,7 @@ import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.job.builder.FlowBuilder;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.job.flow.Flow;
+import org.springframework.batch.core.job.flow.JobExecutionDecider;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.scope.context.ChunkContext;
@@ -36,7 +38,10 @@ public class FlowJobConfiguration {
             , @Qualifier("flowJobStep1") Step flowJobStep1
             , @Qualifier("flowJobStep2") Step flowJobStep2
             , @Qualifier("flowJobStep3") Step flowJobStep3
-            , @Qualifier("flowJobStep4") Step flowJobStep4) {
+            , @Qualifier("flowJobStep4") Step flowJobStep4
+            , @Qualifier("decider") JobExecutionDecider decider
+            , @Qualifier("deciderEvenStep") Step deciderEvenStep
+            , @Qualifier("deciderOddStep") Step deciderOddStep) {
         // 1번 step이 성공하면 3번 Step으로 이동, 실패하면 2번 Step 으로 이동
         return new JobBuilder("simpleFlowJob", jobRepository)
                 .incrementer(new RunIdIncrementer())
@@ -46,13 +51,17 @@ public class FlowJobConfiguration {
                         .on("PASS")
                         .to(flowJobStep4)
                             .on("*")
-                            .stop()
+                            .end()
                 .from(flowJobStep1)
                     .on("FAILED")
                     .to(flowJobStep2)
                 .from(flowJobStep3)
                     .on("*")
-                    .stop()
+                    .to(decider)
+                    .from(decider)
+                        .on("ODD").to(deciderOddStep)
+                    .from(decider)
+                        .on("EVEN").to(deciderEvenStep)
                 .end()
                 .build();
 
@@ -118,6 +127,33 @@ public class FlowJobConfiguration {
                     return RepeatStatus.FINISHED;
                 }, tx) // or .chunk(chunkSize, transactionManager)
                 .build();
+    }
+
+    @Bean(name = "decider")
+    public JobExecutionDecider decider() {
+        return new CustomDecider();
+    }
+
+    @Bean(name = "deciderEvenStep")
+    public Step deciderEvenStep(JobRepository jobRepository, PlatformTransactionManager tx) {
+        return new StepBuilder("deciderEvenStep", jobRepository)
+                .tasklet((contribution, chunkContext) -> {
+                    System.out.println(" ====================== ");
+                    System.out.println(" >> Decider Even Step executed !!");
+                    System.out.println(" ====================== ");
+                    return RepeatStatus.FINISHED;
+                }, tx).build();
+    }
+
+    @Bean(name = "deciderOddStep")
+    public Step deciderOddStep(JobRepository jobRepository, PlatformTransactionManager tx) {
+        return new StepBuilder("deciderOddStep", jobRepository)
+                .tasklet((contribution, chunkContext) -> {
+                    System.out.println(" ====================== ");
+                    System.out.println(" >> Decider Odd Step executed !!");
+                    System.out.println(" ====================== ");
+                    return RepeatStatus.FINISHED;
+                }, tx).build();
     }
 
 }
