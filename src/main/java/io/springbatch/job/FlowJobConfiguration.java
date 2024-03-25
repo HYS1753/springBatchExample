@@ -24,17 +24,22 @@ import org.springframework.transaction.PlatformTransactionManager;
 @Configuration
 @RequiredArgsConstructor
 public class FlowJobConfiguration {
-    @Bean
-    public Job flowJob(JobRepository jobRepository, @Qualifier("flow1") Flow flow1, @Qualifier("flowJobStep3") Step flowJobStep3) {
-        return new JobBuilder("flowJob", jobRepository)
+    @Bean(name= "simpleFlowJob")
+    public Job simpleFlowJob(JobRepository jobRepository
+            , @Qualifier("flow1") Flow flow1
+            , @Qualifier("flow2") Flow flow2
+            , @Qualifier("flowJobStep3") Step flowJobStep3) {
+        return new JobBuilder("simpleFlowJob", jobRepository)
+                .incrementer(new RunIdIncrementer())
                 .start(flow1)
+                .on("COMPLETED").to(flow2)
                 .next(flowJobStep3)
                 .end()
                 .build();
     }
 
-    @Bean(name = "simpleFlowJob")
-    public Job simpleFlowJob(JobRepository jobRepository
+    @Bean(name = "flowJob")
+    public Job flowJob(JobRepository jobRepository
             , @Qualifier("flowJobStep1") Step flowJobStep1
             , @Qualifier("flowJobStep2") Step flowJobStep2
             , @Qualifier("flowJobStep3") Step flowJobStep3
@@ -43,7 +48,7 @@ public class FlowJobConfiguration {
             , @Qualifier("deciderEvenStep") Step deciderEvenStep
             , @Qualifier("deciderOddStep") Step deciderOddStep) {
         // 1번 step이 성공하면 3번 Step으로 이동, 실패하면 2번 Step 으로 이동
-        return new JobBuilder("simpleFlowJob", jobRepository)
+        return new JobBuilder("flowJob", jobRepository)
                 .incrementer(new RunIdIncrementer())
                 .start(flowJobStep1)
                     .on("COMPLETED")
@@ -71,6 +76,16 @@ public class FlowJobConfiguration {
     public Flow flow1(@Qualifier("flowJobStep1") Step flowJobStep1, @Qualifier("flowJobStep2") Step flowJobStep2) {
         FlowBuilder<Flow> flowBuilder = new FlowBuilder<>("flow1");
         flowBuilder.start(flowJobStep1).next(flowJobStep2).end();
+
+        return flowBuilder.build();
+    }
+
+    @Bean(name = "flow2")
+    public Flow flow2(@Qualifier("flowJobStep3") Step flowJobStep3, @Qualifier("flowJobStep4") Step flowJobStep4) {
+        FlowBuilder<Flow> flowBuilder = new FlowBuilder<>("flow2");
+        flowBuilder.start(flowJobStep3)
+                .on("PASS").to(flowJobStep4)
+                .end();
 
         return flowBuilder.build();
     }
